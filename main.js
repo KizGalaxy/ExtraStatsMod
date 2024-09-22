@@ -138,7 +138,9 @@ Game.registerMod("extra stats", {
                     
                 }
                 
-                var formattedPantheonSwapDate = formatDate(Game.Objects.Temple.minigame.swapT,true);
+                if (Game.Objects['Temple'] && Game.Objects['Temple'].minigame) {
+                    var formattedPantheonSwapDate = formatDate(Game.Objects.Temple.minigame.swapT,true);
+                }
 
                 function getYearsAgo(date) {
                     const currentDate = new Date();
