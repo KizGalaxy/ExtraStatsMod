@@ -254,8 +254,10 @@ Game.registerMod("extra stats", {
                     newStats += '<div class="listing"><b>Golden cookie spawn multiplier:</b> <small>x</small>' + Beautify(goldenCookieMultiplier, 2) + '</div>';
                 }
 
-                if (Game.Objects.Farm.minigame.convertTimes > 0 && Game.ascensionMode!=1) {
-                    newStats += '<div class="listing"><b>Garden sacrifices:</b> ' + Beautify(Game.Objects.Farm.minigame.convertTimes) + '</div>';
+                if (Game.Objects['Farm'] && Game.Objects['Farm'].minigame) {
+                    if (Game.Objects.Farm.minigame.convertTimes > 0 && Game.ascensionMode!=1) {
+                        newStats += '<div class="listing"><b>Garden sacrifices:</b> ' + Beautify(Game.Objects.Farm.minigame.convertTimes) + '</div>';
+                    }
                 }
                 
                 if (Game.Objects['Temple'].level > 0 && Game.ascensionMode!=1) {
