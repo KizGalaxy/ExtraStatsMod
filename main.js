@@ -6,7 +6,50 @@ Game.registerMod("extra stats", {
 
         this.waitForGardenMinigame();
 
+        this.waitForStockMarketMinigame();
+
         var originalUpdateMenu = Game.UpdateMenu;
+
+        function calcCurrentChips() {
+            var chipsOwned=Game.HowMuchPrestige(Game.cookiesReset);
+            var ascendNowToOwn=Math.floor(Game.HowMuchPrestige(Game.cookiesReset+Game.cookiesEarned));
+            var ascendNowToGet=ascendNowToOwn-Math.floor(chipsOwned);
+            return BigInt(ascendNowToGet);
+        }  
+
+        let chipsPerSecond = 0;
+        let lastChips = calcCurrentChips();
+        let currentChips = lastChips;
+
+        let logic = () => {
+            if (lastChips) {
+                lastChips = currentChips;
+                currentChips = calcCurrentChips();
+                chipsPerSecond = Number(currentChips - lastChips);
+            } else {
+                lastChips = calcCurrentChips();
+            }
+        };
+
+        Game.registerHook('logic', () => {
+            if (Game.T % Game.fps == 0) logic();
+        });
+
+        logic();
+
+        for (let i in Game.ObjectsById) {
+
+                const str = `'<small><div class="tag">'+loc("owned: %1",me.amount)+'</div>'+(me.free>0?'<div class="tag">'+loc("free: %1!",me.free)+'</div>':'')+`;
+                
+                const edstr = `'<small><div class="tag">'+loc("owned: "+me.amount)+'</div>'+
+                (me.free>0?'<div class="tag">'+ loc("free: "+me.free+"!")+'</div>':'')+
+                (me.bought>0?'<div class="tag">' + loc("bought: " + me.bought) + '</div>':'')+
+                ((me.bought-me.amount)>0?'<div class="tag">' + loc("sold: " +(me.bought-me.amount)) + '</div>':'')+
+                ((Game.Objects[me.name].highest !== me.amount) ? '<div class="tag">' + loc("highest: " + Game.Objects[me.name].highest) + '</div>' : '') + `;
+
+                
+                eval('Game.ObjectsById['+i+'].tooltip='+Game.ObjectsById[i].tooltip.toString().replace('{',"{M=Game.ObjectsById["+i+"].tooltip;").replace(str,edstr));
+        }
 
         Game.UpdateMenu = function() {
             originalUpdateMenu();
@@ -245,10 +288,47 @@ Game.registerMod("extra stats", {
                 }
 
                 var goldenCookieMultiplier = getGoldenCookieMultiplier();
+
+                function getWrinklerSpawnRate() {
+                    var chance = 0.00001 * Game.elderWrath;
                 
+                    chance *= Game.eff('wrinklerSpawn');
+                    if (Game.Has('Unholy bait')) chance *= 5;
+                    
+                    if (Game.hasGod) {
+                        var godLvl = Game.hasGod('scorn');
+                        if (godLvl == 1) chance *= 2.5;
+                        else if (godLvl == 2) chance *= 2;
+                        else if (godLvl == 3) chance *= 1.5;
+                    }
+                
+                    if (Game.Has('Wrinkler doormat')) chance = 0.1;
+                
+                    return chance;
+                }
+
+                var wrinklerSpawnRate = getWrinklerSpawnRate()*100000;
+
+                var totalBuildingsSold = 0;
+                var buildings = ['Cursor', 'Grandma', 'Farm', 'Mine', 'Factory', 'Bank', 'Temple', 'Wizard tower', 'Shipment', 'Alchemy lab', 'Portal', 'Time machine', 'Antimatter condenser', 'Prism', 'Chancemaker', 'Fractal engine', 'Javascript console', 'Idleverse', 'Cortex baker', 'You'];
+                
+                for (var i = 0; i < buildings.length; i++) {
+                    var building = buildings[i];
+                    var buildingObj = Game.Objects[building];
+                    var buildingsSold = buildingObj.bought - buildingObj.amount;
+                    if (buildingsSold > 0) {
+                        totalBuildingsSold += buildingsSold;
+                    }
+                }
+
                 var extraStatsTitle = '<div class="title">Extra Stats</div>';
-                var newStats = '<div class="listing"><b>Session started:</b> ' + timeString + ' ago</div>' +
-                                '<div class="listing"><b>Missed golden cookie clicks:</b> ' + Beautify(Game.missedGoldenClicks) + '</div>';
+                var newStats = '<div class="listing"><b>Session started:</b> ' + timeString + ' ago</div>';
+
+                if (totalBuildingsSold > 0) {
+                    newStats += '<div class="listing"><b>Buildings sold:</b> ' + Beautify(totalBuildingsSold) + '</div>';
+                }
+
+                newStats += '<div class="listing"><b>Missed golden cookie clicks:</b> ' + Beautify(Game.missedGoldenClicks) + '</div>';
 
                 if (goldenCookieMultiplier!=1) {
                     newStats += '<div class="listing"><b>Golden cookie spawn multiplier:</b> <small>x</small>' + Beautify(goldenCookieMultiplier, 2) + '</div>';
@@ -263,13 +343,22 @@ Game.registerMod("extra stats", {
                 if (Game.Objects['Temple'].level > 0 && Game.ascensionMode!=1) {
                     newStats += '<div class="listing"><b>Last pantheon swap time:</b> ' + formattedPantheonSwapDate + '</div>';
                 }
+
+                if (lastChips > 0) {
+                    newStats += '<div class="listing"><b>Heavenly chips per second:</b> ' + Beautify(chipsPerSecond, 1) + '</div>';
+                }
                 
                 if (Game.Upgrades['One mind'].unlocked) {
+
                     if (Game.elderWrath!=0) {
+                        newStats += '<div class="listing"><b>Wrinkler spawn rate multiplier:</b> <small>x</small>' + Beautify(wrinklerSpawnRate, 2) + '</div>';
+                    }
+
+                    if (Game.elderWrath!=0 && Game.Upgrades['Eye of the wrinkler'].unlocked) {
                         newStats += '<div class="listing"><b>Cookies swallowed by wrinklers:</b> ' + Beautify(normalWrinklerSucc) + '</div>';
                     }
                     
-                    if (shinyWrinklerSucc > 0) {
+                    if (shinyWrinklerSucc > 0 && Game.Upgrades['Eye of the wrinkler'].unlocked) {
                         newStats += '<div class="listing"><b>Cookies swallowed by shiny wrinklers:</b> ' + Beautify(shinyWrinklerSucc) + '</div>';
                     }
                 
@@ -354,43 +443,6 @@ Game.registerMod("extra stats", {
                         newStats += '<div class="listing"><b>Save file size:</b> ' + Beautify(unescape(saveData).length) + ' bytes</div>';
                     }
                 }
-                                
-                var brmoment = false;
-                var totalBuildingsBought = 0;
-                var totalBuildingsSold = 0;
-                var buildings = ['Cursor', 'Grandma', 'Farm', 'Mine', 'Factory', 'Bank', 'Temple', 'Wizard tower', 'Shipment', 'Alchemy lab', 'Portal', 'Time machine', 'Antimatter condenser', 'Prism', 'Chancemaker', 'Fractal engine', 'Javascript console', 'Idleverse', 'Cortex baker', 'You'];
-                
-                for (var i = 0; i < buildings.length; i++) {
-                    var building = buildings[i];
-                    var buildingObj = Game.Objects[building];
-                
-                    var buildingsSold = buildingObj.bought - buildingObj.amount;
-                    if (buildingsSold > 0) {
-                        totalBuildingsSold += buildingsSold;
-                    }
-
-                    if (buildingObj.bought > 0) {
-                        if (brmoment == false) {
-                            brmoment = true;
-                            newStats += '<br>';
-                        }
-                    }
-                }
-
-                if (brmoment == true) {
-                    newStats += '<div class="listing"><b>Buildings sold:</b> ' + Beautify(totalBuildingsSold) + '</div>';
-                }
-                
-                for (var i = 0; i < buildings.length; i++) {
-                    var building = buildings[i];
-                    var buildingObj = Game.Objects[building];
-
-                    if (buildingObj.bought > 0) {
-                        var buildingName = (building !== "Factory" && building !== "You") ? building + 's' : (building === "Factory" ? "Factories" : "You");
-                        newStats += '<div class="listing"><b>' + buildingName + ' bought:</b> ' + Beautify(buildingObj.bought) + 
-                                    ' <small>(highest: ' + Beautify(buildingObj.highest) + ')</small></div>';
-                    }
-                }
 
                 if (!menu.innerHTML.includes('Extra Stats')) {
                     var sections = menu.getElementsByClassName('subsection');
@@ -415,6 +467,19 @@ Game.registerMod("extra stats", {
                 const edstr = `'<b>'+loc("Stage:")+'</b> '+loc(["bud","sprout","bloom","mature"][stage-1])+'<br><small>Age: '+Beautify(M.plot[y][x][1])+'%</small></br>'+`;
 
                 eval('Game.Objects.Farm.minigame.tileTooltip='+Game.Objects.Farm.minigame.tileTooltip.toString().replace('{',"{M=Game.Objects.Farm.minigame;").replace(str,edstr));
+
+                clearInterval(checkInterval);
+            }
+        }, 1000);
+    },
+
+    waitForStockMarketMinigame: function() {
+        const checkInterval = setInterval(() => {
+            if (Game.Objects['Bank'] && Game.Objects['Bank'].minigame) {
+                const edstr = `loc((id === 17 ? Game.bakeryName : Game.Objects['Bank'].minigame.goodsById[id].name)+": currently worth <b>$"+Beautify(Game.Objects['Bank'].minigame.getGoodPrice(Game.Objects['Bank'].minigame.goodsById[id]),2)+"</b> per unit <small>(resting value: <b>$</b><b>"+Beautify(Game.Objects['Bank'].minigame.getRestingVal(id),2)+"</b>)</small>."`;
+                const str = `loc("%1: currently worth <b>$%2</b> per unit."`;
+
+                eval('Game.Objects.Bank.minigame.goodTooltip='+Game.Objects.Bank.minigame.goodTooltip.toString().replace('{',"{M=Game.Objects.Bank.minigame;").replace(str,edstr));
 
                 clearInterval(checkInterval);
             }
