@@ -8,8 +8,6 @@ Game.registerMod("extra stats", {
 
         this.waitForStockMarketMinigame();
 
-        var originalUpdateMenu = Game.UpdateMenu;
-
         function calcCurrentChips() {
             var chipsOwned=Game.HowMuchPrestige(Game.cookiesReset);
             var ascendNowToOwn=Math.floor(Game.HowMuchPrestige(Game.cookiesReset+Game.cookiesEarned));
@@ -50,6 +48,96 @@ Game.registerMod("extra stats", {
                 
                 eval('Game.ObjectsById['+i+'].tooltip='+Game.ObjectsById[i].tooltip.toString().replace('{',"{M=Game.ObjectsById["+i+"].tooltip;").replace(str,edstr));
         }
+
+        var originalTooltipDraw = Game.tooltip.draw;
+        var panthchanged = false;
+        var permaedstr;
+
+        Game.tooltip.draw = function(from, text, origin) {
+            originalTooltipDraw.call(Game.tooltip, from, text, origin);
+
+            if (Game.Objects['Temple'] && Game.Objects['Temple'].minigame) {
+                var heartpow;
+                var failRate;
+                var reindeerRate;
+                var goldenCookieRate;
+
+                if (Game.hasGod)
+                {
+                    var godLvl=Game.hasGod('seasons');
+                    if (godLvl==1){
+                        heartpow="30%";
+                        failRate="90%";
+                        reindeerRate="10%";
+                        if (Game.season=='fools') {
+                            goldenCookieRate="4.5%";
+                        } else if (Game.season!='') {
+                            goldenCookieRate="3%";
+                        }
+                    } 
+                    else if (godLvl==2){
+                        heartpow="20%";
+                        failRate="95%";
+                        reindeerRate="5%";
+                        if (Game.season=='fools') {
+                            goldenCookieRate="3%";
+                        } else if (Game.season!='') {
+                            goldenCookieRate="2%";
+                        }
+                    }
+                    else if (godLvl==3){
+                        heartpow="10%";
+                        failRate="97%";
+                        reindeerRate="3%";
+                        if (Game.season=='fools') {
+                            goldenCookieRate="1.5%";
+                        } else if (Game.season!='') {
+                            goldenCookieRate="1%";
+                        }
+                    }
+                }
+                
+                var strtest = '<span class="green">Some seasonal effects are boosted.</span>';
+                var edstrtest = '<span class="green">Some seasonal effects are boosted';
+
+                if (Game.hasGod('seasons')) {
+                    edstrtest += ":</span><br>";
+                    if (Game.season!='') {
+                        edstrtest += "<br><span>Golden cookies appear <b>"+goldenCookieRate+"</b> more often.</span>";
+                    }
+                    edstrtest += "<br><span>Heart cookies are <b>"+heartpow+"</b> more powerful.</span>";
+                    if (Game.season=='easter') {
+                        edstrtest += "<br><span>The fail rate to get Easter eggs reduces to <b>"+failRate+"</b>.</span>";
+                    } else if (Game.season=='halloween'){
+                        edstrtest += "<br><span>The fail rate to get Halloween cookies reduces to <b>"+failRate+"</b>.</span>";
+                    } else if (Game.season=='christmas'){
+                        edstrtest += "<br><span>The fail rate to get Christmas cookies reduces to <b>"+failRate+"</b>.</span>" +
+                                    "<br><span>Reindeer appear <b>"+reindeerRate+"</b> more often.</span>";
+                    }
+                }else{
+                    edstrtest += ".</span>";
+                }
+
+                var str = "'+me.descBefore+'";
+                var edstr = "'+(me.descBefore).replace('"+strtest+"','"+edstrtest+"')+'";
+
+                if (panthchanged==false) {
+                    panthchanged=true;
+                    eval('Game.Objects.Temple.minigame.slotTooltip='+Game.Objects.Temple.minigame.slotTooltip.toString().replace('{',"{M=Game.Objects.Temple.minigame;").replace(str,edstr));
+                    permaedstr = edstr;
+
+                } else if(panthchanged==true && permaedstr != edstr){
+                    panthchanged=false;
+                    eval('Game.Objects.Temple.minigame.slotTooltip='+Game.Objects.Temple.minigame.slotTooltip.toString().replace('{',"{M=Game.Objects.Temple.minigame;").replace(permaedstr,str));
+
+                }
+                
+            
+            }
+
+        }
+
+        var originalUpdateMenu = Game.UpdateMenu;
 
         Game.UpdateMenu = function() {
             originalUpdateMenu();
@@ -383,8 +471,16 @@ Game.registerMod("extra stats", {
 
                 newStats += '<div class="listing"><b>Next seasonal event:</b> ' + nextSeason.name + ' <small>(in ' + nextSeason.daysUntil + ' days)</small></div>';
 
+                let today = new Date();
+                let fullDate = new Date(Game.fullDate);
+                let startDate = new Date(Game.startDate);
+
                 if (Game.resets > 0) {
+                if (today.getDate() === fullDate.getDate() && today.getMonth() === fullDate.getMonth() && today.getFullYear() !== fullDate.getFullYear()) {
+                    newStats += '<div class="listing"><b>Legacy start time:</b><div class="icon" style="display:inline-block;float:none;transform:scale(0.5);margin:-24px -16px -19px -8px;' + writeIcon(Game.Upgrades["Birthday cookie"].icon) + '"></div> ' + formattedFullDate;
+                } else {
                     newStats += '<div class="listing"><b>Legacy start time:</b> ' + formattedFullDate;
+                }
                     
                     if (yearsSinceFullDate.years >= 1) {
                         newStats += ' <small>(over ' + yearsSinceFullDate.years + ' year';
@@ -408,8 +504,12 @@ Game.registerMod("extra stats", {
                     
                     newStats += '</div>';
                 }
-                
-                newStats += '<div class="listing"><b>Run start time:</b> ' + formattedStartDate;
+
+                if (today.getDate() === startDate.getDate() && today.getMonth() === startDate.getMonth() && today.getFullYear() !== startDate.getFullYear()) {
+                    newStats += '<div class="listing"><b>Run start time:</b><div class="icon" style="display:inline-block;float:none;transform:scale(0.5);margin:-24px -16px -19px -8px;' + writeIcon(Game.Upgrades["Birthday cookie"].icon) + '"></div> ' + formattedStartDate;
+                } else {
+                    newStats += '<div class="listing"><b>Run start time:</b> ' + formattedStartDate;
+                }
                 
                 if (yearsSinceStartDate.years >= 1) {
                     newStats += ' <small>(over ' + yearsSinceStartDate.years + ' year';
@@ -457,6 +557,7 @@ Game.registerMod("extra stats", {
                     statsDiv.innerHTML = extraStatsTitle + newStats;
                 }
             }
+
         }.bind(this);
     },
 
@@ -485,4 +586,5 @@ Game.registerMod("extra stats", {
             }
         }, 1000);
     }
+
 });
