@@ -10,9 +10,14 @@ if (Game.Achievements) {
 
 Game.registerMod("extra stats", {
     init: function() {
-        if (thirdpartychecker==false) {
-            Game.Achievements["Third-party"].won=0;
-            Game.CloseNote(2);
+        if (thirdpartychecker == false) {
+            Game.Achievements["Third-party"].won = 0;
+            for (var i in Game.Notes) {
+                var note = Game.Notes[i];
+                if (note.desc.includes("Third-party")) {
+                    Game.CloseNote(note.id);
+                }
+            }
         }
         Game.Notify('Extra Stats loaded!', '', '', 1, 1);
 
