@@ -1,5 +1,19 @@
+if (Game.Achievements) {
+    var thirdpartychecker;
+    
+    if (Game.Achievements["Third-party"].won) {
+        thirdpartychecker=true;
+    }else{
+        thirdpartychecker=false;
+    }
+}
+
 Game.registerMod("extra stats", {
     init: function() {
+        if (thirdpartychecker==false) {
+            Game.Achievements["Third-party"].won=0;
+            Game.CloseNote(2);
+        }
         Game.Notify('Extra Stats loaded!', '', '', 1, 1);
 
         this.sessionStartTime = Date.now();
@@ -7,6 +21,8 @@ Game.registerMod("extra stats", {
         this.waitForGardenMinigame();
 
         this.waitForStockMarketMinigame();
+
+        this.waitForWizardTowerMinigame();
 
         function calcCurrentChips() {
             var chipsOwned=Game.HowMuchPrestige(Game.cookiesReset);
@@ -397,6 +413,25 @@ Game.registerMod("extra stats", {
 
                 var wrinklerSpawnRate = getWrinklerSpawnRate()*100000;
 
+                function getReindeerSpawnRate() {
+                    var chance = 1;
+                    if (Game.Has('Reindeer baking grounds')) chance*=2;
+                    if (Game.Has('Starsnow')) chance/=0.95;
+                    if (Game.hasGod)
+                    {
+                        var godLvl=Game.hasGod('seasons');
+                        if (godLvl==1) chance/=0.9;
+                        else if (godLvl==2) chance/=0.95;
+                        else if (godLvl==3) chance/=0.97;
+                    }
+                    chance/=1/Game.eff('reindeerFreq');
+                    if (Game.Has('Reindeer season')) chance=100;
+
+                    return chance;
+                }
+
+                var reindeerSpawnRate = getReindeerSpawnRate();
+
                 var totalBuildingsSold = 0;
                 var buildings = ['Cursor', 'Grandma', 'Farm', 'Mine', 'Factory', 'Bank', 'Temple', 'Wizard tower', 'Shipment', 'Alchemy lab', 'Portal', 'Time machine', 'Antimatter condenser', 'Prism', 'Chancemaker', 'Fractal engine', 'Javascript console', 'Idleverse', 'Cortex baker', 'You'];
                 
@@ -435,10 +470,14 @@ Game.registerMod("extra stats", {
                 if (lastChips > 0) {
                     newStats += '<div class="listing"><b>Heavenly chips per second:</b> ' + Beautify(chipsPerSecond, 1) + '</div>';
                 }
+
+                if (reindeerSpawnRate != 1 && Game.season=='christmas') {
+                    newStats += '<div class="listing"><b>Reindeer spawn rate multiplier:</b> <small>x</small>' + Beautify(reindeerSpawnRate, 2) + '</div>';
+                }
                 
                 if (Game.Upgrades['One mind'].unlocked) {
 
-                    if (Game.elderWrath!=0) {
+                    if (Game.elderWrath!=0 && wrinklerSpawnRate!=1) {
                         newStats += '<div class="listing"><b>Wrinkler spawn rate multiplier:</b> <small>x</small>' + Beautify(wrinklerSpawnRate, 2) + '</div>';
                     }
 
@@ -581,6 +620,19 @@ Game.registerMod("extra stats", {
                 const str = `loc("%1: currently worth <b>$%2</b> per unit."`;
 
                 eval('Game.Objects.Bank.minigame.goodTooltip='+Game.Objects.Bank.minigame.goodTooltip.toString().replace('{',"{M=Game.Objects.Bank.minigame;").replace(str,edstr));
+
+                clearInterval(checkInterval);
+            }
+        }, 1000);
+    },
+
+    waitForWizardTowerMinigame: function() {
+        const checkInterval = setInterval(() => {
+            if (Game.Objects['Wizard tower'] && Game.Objects['Wizard tower'].minigame) {
+                const edstr = `Beautify(M.magic,2)`;
+                const str = `Math.min(Math.floor(M.magicM),Beautify(M.magic))`;
+
+                eval('Game.Objects["Wizard tower"].minigame.draw='+Game.Objects['Wizard tower'].minigame.draw.toString().replace('{',"{M=Game.Objects['Wizard tower'].minigame;").replace(str,edstr));
 
                 clearInterval(checkInterval);
             }
