@@ -298,14 +298,22 @@ Game.registerMod("extra stats", {
                     const currentDate = new Date();
                     let years = currentDate.getFullYear() - date.getFullYear();
                     let months = currentDate.getMonth() - date.getMonth();
-                    
+                    let days = currentDate.getDate() - date.getDate();
+                
+                    if (days < 0) {
+                        months--;
+                        const previousMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0);
+                        days += previousMonth.getDate();
+                    }
+                
                     if (months < 0) {
                         years--;
                         months += 12;
                     }
-                    
-                    return { years: years, months: months };
+                
+                    return { years: years, months: months, days: days };
                 }
+
                 
                 var formattedFullDate = formatDate(Game.fullDate);
                 var formattedStartDate = formatDate(Game.startDate);
@@ -462,20 +470,6 @@ Game.registerMod("extra stats", {
                     newStats += '<div class="listing"><b>Golden cookie spawn multiplier:</b> <small>x</small>' + Beautify(goldenCookieMultiplier, 2) + '</div>';
                 }
 
-                if (Game.Objects['Farm'] && Game.Objects['Farm'].minigame) {
-                    if (Game.Objects.Farm.minigame.convertTimes > 0 && Game.ascensionMode!=1) {
-                        newStats += '<div class="listing"><b>Garden sacrifices:</b> ' + Beautify(Game.Objects.Farm.minigame.convertTimes) + '</div>';
-                    }
-                }
-                
-                if (Game.Objects['Temple'].level > 0 && Game.ascensionMode!=1) {
-                    newStats += '<div class="listing"><b>Last pantheon swap time:</b> ' + formattedPantheonSwapDate + '</div>';
-                }
-
-                if (lastChips > 0) {
-                    newStats += '<div class="listing"><b>Heavenly chips per second:</b> ' + Beautify(chipsPerSecond, 1) + '</div>';
-                }
-
                 if (reindeerSpawnRate != 1 && Game.season=='christmas') {
                     newStats += '<div class="listing"><b>Reindeer spawn rate multiplier:</b> <small>x</small>' + Beautify(reindeerSpawnRate, 2) + '</div>';
                 }
@@ -500,8 +494,22 @@ Game.registerMod("extra stats", {
                     }
                 }
 
+                if (lastChips > 0) {
+                    newStats += '<div class="listing"><b>Heavenly chips per second:</b> ' + Beautify(chipsPerSecond, 1) + '</div>';
+                }
+
                 if (Game.TickerClicks>0) {
                     newStats += '<div class="listing"><b>News ticker clicks:</b> ' + Beautify(Game.TickerClicks) + '</div>';
+                }
+
+                if (Game.Objects['Farm'] && Game.Objects['Farm'].minigame) {
+                    if (Game.Objects.Farm.minigame.convertTimes > 0 && Game.ascensionMode!=1) {
+                        newStats += '<div class="listing"><b>Garden sacrifices:</b> ' + Beautify(Game.Objects.Farm.minigame.convertTimes) + '</div>';
+                    }
+                }
+                
+                if (Game.Objects['Temple'].level > 0 && Game.ascensionMode!=1) {
+                    newStats += '<div class="listing"><b>Last pantheon swap time:</b> ' + formattedPantheonSwapDate + '</div>';
                 }
 
                 if (Game.Upgrades['Fortune cookies'].unlocked && Game.ascensionMode!=1) {
@@ -539,7 +547,7 @@ Game.registerMod("extra stats", {
                         }
                         newStats += ' ago)</small>';
                     } else if (yearsSinceFullDate.months >= 1) {
-                        newStats += ' <small>(' + yearsSinceFullDate.months + ' month';
+                        newStats += ' <small>(over ' + yearsSinceFullDate.months + ' month';
                         if (yearsSinceFullDate.months != 1) {
                             newStats += 's';
                         }
@@ -568,7 +576,7 @@ Game.registerMod("extra stats", {
                     }
                     newStats += ' ago)</small>';
                 } else if (yearsSinceStartDate.months >= 1) {
-                    newStats += ' <small>(' + yearsSinceStartDate.months + ' month';
+                    newStats += ' <small>(over ' + yearsSinceStartDate.months + ' month';
                     if (yearsSinceStartDate.months != 1) {
                         newStats += 's';
                     }
