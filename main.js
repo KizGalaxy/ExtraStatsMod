@@ -70,94 +70,77 @@ Game.registerMod("extra stats", {
                 eval('Game.ObjectsById['+i+'].tooltip='+Game.ObjectsById[i].tooltip.toString().replace('{',"{M=Game.ObjectsById["+i+"].tooltip;").replace(str,edstr));
         }
 
-        var originalTooltipDraw = Game.tooltip.draw;
-        var panthchanged = false;
-        var permaedstr;
-
+        if (!Game.tooltip.originalDraw) {
+            Game.tooltip.originalDraw = Game.tooltip.draw;
+        }
+        
+        if (!Game.tooltip.panthchanged) {
+            Game.tooltip.panthchanged = false;
+        }
+        
+        if (!Game.tooltip.permaedstr) {
+            Game.tooltip.permaedstr = false;
+        }
+        
         Game.tooltip.draw = function(from, text, origin) {
-            originalTooltipDraw.call(Game.tooltip, from, text, origin);
-
+            Game.tooltip.originalDraw.call(Game.tooltip, from, text, origin);
+        
             if (Game.Objects['Temple'] && Game.Objects['Temple'].minigame) {
                 var heartpow;
                 var failRate;
                 var reindeerRate;
                 var goldenCookieRate;
-
-                if (Game.hasGod)
-                {
-                    var godLvl=Game.hasGod('seasons');
-                    if (godLvl==1){
-                        heartpow="30%";
-                        failRate="90%";
-                        reindeerRate="10%";
-                        if (Game.season=='fools') {
-                            goldenCookieRate="4.5%";
-                        } else if (Game.season!='') {
-                            goldenCookieRate="3%";
-                        }
-                    } 
-                    else if (godLvl==2){
-                        heartpow="20%";
-                        failRate="95%";
-                        reindeerRate="5%";
-                        if (Game.season=='fools') {
-                            goldenCookieRate="3%";
-                        } else if (Game.season!='') {
-                            goldenCookieRate="2%";
-                        }
-                    }
-                    else if (godLvl==3){
-                        heartpow="10%";
-                        failRate="97%";
-                        reindeerRate="3%";
-                        if (Game.season=='fools') {
-                            goldenCookieRate="1.5%";
-                        } else if (Game.season!='') {
-                            goldenCookieRate="1%";
-                        }
+        
+                if (Game.hasGod) {
+                    var godLvl = Game.hasGod('seasons');
+                    if (godLvl == 1) {
+                        heartpow = "30%";
+                        failRate = "90%";
+                        reindeerRate = "10%";
+                        goldenCookieRate = (Game.season == 'fools') ? "4.5%" : "3%";
+                    } else if (godLvl == 2) {
+                        heartpow = "20%";
+                        failRate = "95%";
+                        reindeerRate = "5%";
+                        goldenCookieRate = (Game.season == 'fools') ? "3%" : "2%";
+                    } else if (godLvl == 3) {
+                        heartpow = "10%";
+                        failRate = "97%";
+                        reindeerRate = "3%";
+                        goldenCookieRate = (Game.season == 'fools') ? "1.5%" : "1%";
                     }
                 }
-                
+        
                 var strtest = '<span class="green">Some seasonal effects are boosted.</span>';
-                var edstrtest = '<span class="green">Some seasonal effects are boosted';
-
-                if (Game.hasGod('seasons')) {
-                    edstrtest += ":</span><br>";
-                    if (Game.season!='') {
-                        edstrtest += "<br><span>Golden cookies appear <b>"+goldenCookieRate+"</b> more often.</span>";
-                    }
-                    edstrtest += "<br><span>Heart cookies are <b>"+heartpow+"</b> more powerful.</span>";
-                    if (Game.season=='easter') {
-                        edstrtest += "<br><span>The fail rate to get Easter eggs reduces to <b>"+failRate+"</b>.</span>";
-                    } else if (Game.season=='halloween'){
-                        edstrtest += "<br><span>The fail rate to get Halloween cookies reduces to <b>"+failRate+"</b>.</span>";
-                    } else if (Game.season=='christmas'){
-                        edstrtest += "<br><span>The fail rate to get Christmas cookies reduces to <b>"+failRate+"</b>.</span>" +
-                                    "<br><span>Reindeer appear <b>"+reindeerRate+"</b> more often.</span>";
-                    }
-                }else{
-                    edstrtest += ".</span>";
+                var edstrtest = '<span class="green">Some seasonal effects are boosted:</span><br>';
+                if (Game.season != '') {
+                    edstrtest += "<br><span>Golden cookies appear <b>" + goldenCookieRate + "</b> more often.</span>";
                 }
-
+                edstrtest += "<br><span>Heart cookies are <b>" + heartpow + "</b> more powerful.</span>";
+                if (Game.season == 'easter') {
+                    edstrtest += "<br><span>The fail rate to get Easter eggs reduces to <b>" + failRate + "</b>.</span>";
+                } else if (Game.season == 'halloween') {
+                    edstrtest += "<br><span>The fail rate to get Halloween cookies reduces to <b>" + failRate + "</b>.</span>";
+                } else if (Game.season == 'christmas') {
+                    edstrtest += "<br><span>The fail rate to get Christmas cookies reduces to <b>" + failRate + "</b>.</span>" +
+                        "<br><span>Reindeer appear <b>" + reindeerRate + "</b> more often.</span>";
+                }
+        
                 var str = "'+me.descBefore+'";
-                var edstr = "'+(me.descBefore).replace('"+strtest+"','"+edstrtest+"')+'";
-
-                if (panthchanged==false) {
-                    panthchanged=true;
-                    eval('Game.Objects.Temple.minigame.slotTooltip='+Game.Objects.Temple.minigame.slotTooltip.toString().replace('{',"{M=Game.Objects.Temple.minigame;").replace(str,edstr));
-                    permaedstr = edstr;
-
-                } else if(panthchanged==true && permaedstr != edstr){
-                    panthchanged=false;
-                    eval('Game.Objects.Temple.minigame.slotTooltip='+Game.Objects.Temple.minigame.slotTooltip.toString().replace('{',"{M=Game.Objects.Temple.minigame;").replace(permaedstr,str));
-
+                var edstr = "'+(me.descBefore).replace('" + strtest + "','" + edstrtest + "')+'";
+        
+                if (Game.tooltip.panthchanged == false) {
+                    Game.tooltip.panthchanged = true;
+                    eval('Game.Objects.Temple.minigame.slotTooltip=' + Game.Objects.Temple.minigame.slotTooltip.toString().replace('{', "{M=Game.Objects.Temple.minigame;").replace(str, edstr));
+                    Game.tooltip.permaedstr = edstr;
+                } else if (Game.tooltip.panthchanged == true && Game.tooltip.permaedstr != edstr) {
+                    Game.tooltip.panthchanged = false;
+                    eval('Game.Objects.Temple.minigame.slotTooltip=' + Game.Objects.Temple.minigame.slotTooltip.toString().replace('{', "{M=Game.Objects.Temple.minigame;").replace(Game.tooltip.permaedstr, str));
                 }
-                
-            
             }
-
         }
-
+        
+        
         var originalUpdateMenu = Game.UpdateMenu;
 
         Game.UpdateMenu = function() {
